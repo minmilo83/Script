@@ -6,6 +6,12 @@
       "title": "Script 開發日誌",
       "path": "library/demo-book/",
       "category": "系統開發"
+    },
+    {
+      "id": "demo2",
+      "title": "深海之約 (測試用)",
+      "path": "library/demo2/",
+      "category": "Danmei"
     }
   ]
 }
