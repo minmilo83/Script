@@ -1,6 +1,6 @@
 {
   "title": "Script 開發日誌",
   "scripts": [
-    { "file": "chapter1.txt" }
+    { "file": "scripts/chapter1.txt" }
   ]
 }
