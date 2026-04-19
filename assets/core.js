@@ -1,9 +1,18 @@
-// 核心引擎邏輯：偵測頁面並啟動對應功能
+/**
+ * Script Codex - Core Engine V1.1
+ * 核心引擎：偵測頁面並啟動對應功能，並整合閱讀流轉邏輯
+ */
+
+// 全域狀態：追蹤當前書籍與章節
+let currentBookId = "";
+let currentChapters = [];
+let currentIndex = 0;
+
 document.addEventListener('DOMContentLoaded', () => {
     const path = window.location.pathname;
 
     // 根據網址判斷是在書架頁還是閱讀頁
-    if (path.includes('shelf.html') || path.endsWith('/')) {
+    if (path.includes('shelf.html') || path.endsWith('/') || path.endsWith('index.html')) {
         loadShelf();
     } else if (path.includes('engine.html')) {
         loadReader();
@@ -33,34 +42,100 @@ async function loadShelf() {
     }
 }
 
-// --- 閱讀器邏輯：抓取內容與標題 ---
+// --- 閱讀器邏輯：抓取內容與導航控制 ---
 async function loadReader() {
     const params = new URLSearchParams(window.location.search);
-    const bookId = params.get('book');
+    currentBookId = params.get('book');
     const contentArea = document.getElementById('script-content');
 
-    if (!bookId) {
+    if (!currentBookId) {
         if (contentArea) contentArea.innerHTML = "<p class='line'>未指定書籍，請返回書架。</p>";
         return;
     }
 
     try {
-        // 抓取書籍身份資料
-        const idResponse = await fetch(`library/${bookId}/identity.json`);
+        // 1. 抓取書籍身份資料 (identity.json)
+        const idResponse = await fetch(`library/${currentBookId}/identity.json`);
         const bookInfo = await idResponse.json();
         document.getElementById('current-book-title').innerText = bookInfo.title;
 
-        // 預設載入第一章節
-        const firstScript = bookInfo.scripts[0].file;
-        const scriptResponse = await fetch(`library/${bookId}/${firstScript}`);
-        const rawContent = await scriptResponse.text();
-        
-        // 使用墨影琉璃引擎解析內容並注入
-        contentArea.innerHTML = parseCodexContent(rawContent);
+        // 2. 儲存章節清單並判斷當前索引
+        currentChapters = bookInfo.scripts;
+        const chParam = params.get('ch');
+        currentIndex = chParam ? parseInt(chParam) : 0;
+
+        // 3. 初始化按鈕事件
+        setupNavigation();
+
+        // 4. 載入內容
+        fetchChapter(currentIndex);
 
     } catch (e) {
         if (contentArea) contentArea.innerHTML = "<div class='system-text'>─[錯誤：無法開啟書頁，請確認路徑正確]─</div>";
         console.error("Reader Load Error:", e);
+    }
+}
+
+// --- 導航控制：處理上一章與下一章 ---
+function setupNavigation() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    if (prevBtn) {
+        prevBtn.onclick = () => {
+            if (currentIndex > 0) fetchChapter(currentIndex - 1);
+        };
+    }
+    if (nextBtn) {
+        nextBtn.onclick = () => {
+            if (currentIndex < currentChapters.length - 1) fetchChapter(currentIndex + 1);
+        };
+    }
+}
+
+// --- 載入特定章節並渲染 ---
+async function fetchChapter(index) {
+    const contentArea = document.getElementById('script-content');
+    if (!contentArea || !currentChapters[index]) return;
+
+    try {
+        currentIndex = index;
+        const fileName = currentChapters[currentIndex].file;
+
+        // 抓取 TXT 內容
+        const scriptResponse = await fetch(`library/${currentBookId}/${fileName}`);
+        const rawContent = await scriptResponse.text();
+        
+        // 渲染內容
+        contentArea.innerHTML = parseCodexContent(rawContent);
+
+        // 更新按鈕樣式與網址
+        updateNavUI();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+
+        // 更新網址參數 ch，方便書籤紀錄
+        const newUrl = `${window.location.pathname}?book=${currentBookId}&ch=${currentIndex}`;
+        window.history.replaceState({ path: newUrl }, '', newUrl);
+
+    } catch (e) {
+        contentArea.innerHTML = "<div class='system-text'>─[錯誤：無法讀取章節內容]─</div>";
+    }
+}
+
+// 更新導航按鈕的視覺狀態（第一章禁回退，末章禁前進）
+function updateNavUI() {
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+
+    if (prevBtn) {
+        const isFirst = currentIndex === 0;
+        prevBtn.style.opacity = isFirst ? "0.3" : "1";
+        prevBtn.style.pointerEvents = isFirst ? "none" : "auto";
+    }
+    if (nextBtn) {
+        const isLast = currentIndex === currentChapters.length - 1;
+        nextBtn.style.opacity = isLast ? "0.3" : "1";
+        nextBtn.style.pointerEvents = isLast ? "none" : "auto";
     }
 }
 
@@ -71,7 +146,10 @@ function parseCodexContent(text) {
 
     lines.forEach((line) => {
         let trimmedLine = line.trim();
-        if (!trimmedLine) return;
+        if (!trimmedLine) {
+            htmlOutput += `<div style="height: 1.2em;"></div>`; // 處理空行
+            return;
+        }
 
         // 1. 系統訊息：以 ─ 開頭
         if (trimmedLine.startsWith('─')) {
@@ -90,7 +168,7 @@ function parseCodexContent(text) {
         }
 
         // 4. 數據與百分比強調
-        trimmedLine = trimmedLine.replace(/(\d+(\.\d+)?(次|則|「1」|％|%))/g, '<span class="stat-highlight">$1</span>');
+        trimmedLine = trimmedLine.replace(/(\d+(\.\d+)?(次|則|「1」|％|%|層|級|點))/g, '<span class="stat-highlight">$1</span>');
 
         htmlOutput += `<p class="line">${trimmedLine}</p>`;
     });
