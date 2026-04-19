@@ -14,6 +14,12 @@
       "category": "隨筆"
     },
     {
+      "id": "使用簡介",
+      "title": "使用簡介",
+      "path": "library/使用簡介/",
+      "category": "平台使用守則"
+    },
+    {
       "id": "異之領域",
       "title": "異之領域",
       "path": "library/異之領域/",
