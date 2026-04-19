@@ -1,0 +1,30 @@
+/* 基礎美學設定 */
+:root {
+  --bg-color: #f4f1ea;    /* 溫和的紙張色 */
+  --text-color: #2c2c2c;  /* 沉穩的深灰色 */
+  --accent-color: #8b0000; /* 點綴色：深紅 */
+  --font-main: 'Noto Serif TC', serif; /* 建議選用襯線體 */
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  font-family: var(--font-main);
+  line-height: 1.8;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* 內容容器 */
+#reader-container {
+  max-width: 700px;
+  padding: 40px 20px;
+  width: 100%;
+}
+
+/* 標題樣式 */
+h1, h2, h3 {
+  color: var(--accent-color);
+}
