@@ -47,6 +47,25 @@ body {
     min-height: 100vh;
 }
 
+/* --- 0. 動態效果定義 (Animations) --- */
+@keyframes inkFadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+        filter: blur(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+        filter: blur(0);
+    }
+}
+
+/* 用於內容切換的動畫類別 */
+.fade-in-active {
+    animation: inkFadeIn 1.2s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
 /* --- 1. 書架介面佈局 (Grid) --- */
 h1 {
     margin-top: 60px;
@@ -62,6 +81,8 @@ h1 {
     width: 85%;
     max-width: 1000px;
     padding: 40px 0 100px 0;
+    /* 書架卡片也套用淡入 */
+    animation: inkFadeIn 1s ease-out forwards;
 }
 
 /* --- 2. 玻璃質感卡片 (.book-card) --- */
@@ -74,8 +95,6 @@ h1 {
     cursor: pointer;
     text-align: left;
     transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-    
-    /* 玻璃邊框與陰影 */
     border-top: 1.5px solid rgba(255, 255, 255, 0.6);
     border-left: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 
@@ -104,7 +123,7 @@ h1 {
     line-height: 1.5;
 }
 
-/* --- 3. 玻璃質感按鈕 (.back-btn, #reader-nav button) --- */
+/* --- 3. 玻璃質感按鈕 --- */
 .back-btn, #reader-nav button {
     background: rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
@@ -139,6 +158,8 @@ h1 {
     padding: 120px 20px;
     text-align: justify;
     line-break: strict;
+    /* 初始透明，等待 JS 觸發動畫 */
+    opacity: 0; 
 }
 
 #book-header {
