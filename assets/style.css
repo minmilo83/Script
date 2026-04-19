@@ -55,6 +55,39 @@ body {
     line-break: strict; /* 避頭尾禁則 */
 }
 
+/* --- 返回按鈕樣式 --- */
+.back-btn {
+    background: transparent;
+    border: 1px solid var(--current-accent);
+    color: var(--current-accent);
+    padding: 5px 15px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    margin-bottom: 15px;
+    display: inline-block;
+}
+
+.back-btn:hover {
+    background: var(--current-accent);
+    color: var(--current-bg);
+}
+
+/* --- 標題區域微調 --- */
+#book-header {
+    margin-bottom: 50px;
+    border-bottom: 1px solid rgba(var(--accent-rgb), 0.1);
+    padding-bottom: 20px;
+}
+
+#current-book-title {
+    margin: 10px 0;
+    font-size: 1.6em;
+    font-weight: 700;
+}
+
 /* --- 3D 圓弧玻璃 Dock --- */
 .glass-dock {
     position: fixed;
