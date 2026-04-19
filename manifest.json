@@ -1,0 +1,10 @@
+{
+  "library_name": "Script Codex",
+  "books": [
+    {
+      "id": "demo-book",
+      "path": "library/demo-book/",
+      "category": "測試"
+    }
+  ]
+}
