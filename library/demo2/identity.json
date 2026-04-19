@@ -1,7 +1,14 @@
 {
   "title": "深海之約 (測試用)",
   "scripts": [
-    { "file": "chapter1.txt" },
-    { "file": "chapter2.txt" }
+    {
+      "file": "chapter1.txt"
+    },
+    {
+      "file": "chapter2.txt"
+    },
+    {
+      "file": "chapter3.txt"
+    }
   ]
 }
