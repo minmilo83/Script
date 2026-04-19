@@ -17,11 +17,12 @@ async function loadShelf() {
         const data = await response.json();
         
         container.innerHTML = data.books.map(book => `
-            <div class="book-card" onclick="location.href='engine.html?book=${book.id}'">
-                <h3>${book.id}</h3>
-                <p>分類：${book.category}</p>
-            </div>
-        `).join('');
+    <div class="book-card" onclick="location.href='engine.html?book=${book.id}'">
+        <h3>${book.title}</h3>
+        <p>編號：${book.id}</p>
+        <p>分類：${book.category}</p>
+    </div>
+`).join('');
     } catch (e) {
         container.innerHTML = "無法加載書架內容。";
     }
