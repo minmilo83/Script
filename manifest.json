@@ -3,8 +3,9 @@
   "books": [
     {
       "id": "demo-book",
+      "title": "Script 開發日誌",
       "path": "library/demo-book/",
-      "category": "測試"
+      "category": "系統開發"
     }
   ]
 }
