@@ -6,7 +6,59 @@ document.addEventListener('DOMContentLoaded', () => {
         loadShelf();
     } else if (path.includes('engine.html')) {
         loadReader();
-        // --- 墨影琉璃：符號解析引擎 ---
+    }
+});
+
+// --- 書架邏輯 ---
+async function loadShelf() {
+    const container = document.getElementById('shelf-container');
+    if (!container) return;
+    try {
+        const response = await fetch('manifest.json');
+        const data = await response.json();
+        
+        container.innerHTML = data.books.map(book => `
+            <div class="book-card" onclick="location.href='engine.html?book=${book.id}'">
+                <h3>${book.title}</h3>
+                <p>編號：${book.id}</p>
+                <p>分類：${book.category}</p>
+            </div>
+        `).join('');
+    } catch (e) {
+        container.innerHTML = "無法加載書架內容。";
+    }
+}
+
+// --- 閱讀器邏輯 ---
+async function loadReader() {
+    const params = new URLSearchParams(window.location.search);
+    const bookId = params.get('book');
+    const contentArea = document.getElementById('script-content');
+
+    if (!bookId) {
+        if (contentArea) contentArea.innerHTML = "未指定書籍。";
+        return;
+    }
+
+    try {
+        const idResponse = await fetch(`library/${bookId}/identity.json`);
+        const bookInfo = await idResponse.json();
+        document.getElementById('current-book-title').innerText = bookInfo.title;
+
+        const firstScript = bookInfo.scripts[0].file;
+        const scriptResponse = await fetch(`library/${bookId}/${firstScript}`);
+        const rawContent = await scriptResponse.text();
+        
+        // 使用墨影琉璃引擎解析內容
+        contentArea.innerHTML = parseCodexContent(rawContent);
+
+    } catch (e) {
+        if (contentArea) contentArea.innerHTML = "讀取書籍內容出錯，請檢查路徑。";
+        console.error(e);
+    }
+}
+
+// --- 墨影琉璃：符號解析引擎 (獨立函數) ---
 function parseCodexContent(text) {
     const lines = text.trim().split('\n');
     let htmlOutput = '';
@@ -39,56 +91,8 @@ function parseCodexContent(text) {
 
     return htmlOutput;
 }
-    }
-});
 
-// --- 書架邏輯 ---
-async function loadShelf() {
-    const container = document.getElementById('shelf-container');
-    try {
-        const response = await fetch('manifest.json');
-        const data = await response.json();
-        
-        container.innerHTML = data.books.map(book => `
-    <div class="book-card" onclick="location.href='engine.html?book=${book.id}'">
-        <h3>${book.title}</h3>
-        <p>編號：${book.id}</p>
-        <p>分類：${book.category}</p>
-    </div>
-`).join('');
-    } catch (e) {
-        container.innerHTML = "無法加載書架內容。";
-    }
-}
-
-// --- 閱讀器邏輯 ---
-async function loadReader() {
-    const params = new URLSearchParams(window.location.search);
-    const bookId = params.get('book');
-    const contentArea = document.getElementById('script-content');
-
-    if (!bookId) {
-        contentArea.innerHTML = "未指定書籍。";
-        return;
-    }
-
-   // ...前面的代碼保持不變...
-try {
-    const idResponse = await fetch(`library/${bookId}/identity.json`);
-    const bookInfo = await idResponse.json();
-    document.getElementById('current-book-title').innerText = bookInfo.title;
-
-    const firstScript = bookInfo.scripts[0].file;
-    const scriptResponse = await fetch(`library/${bookId}/${firstScript}`);
-    const rawContent = await scriptResponse.text(); // 改成抓取原始文字
-    
-    // 【關鍵修改】：使用解析引擎處理內容
-    contentArea.innerHTML = parseCodexContent(rawContent);
-
-} catch (e) {
-    // ...錯誤處理保持不變...
-}
-// --- 主題切換邏輯 ---
+// --- 主題切換邏輯 (全域函數) ---
 function setMode(mode) {
     document.body.className = `mode-${mode}`;
     updateThemeEffects(mode, null);
@@ -103,7 +107,6 @@ function updateThemeEffects(bg, mood) {
     const isDark = bg === 'black';
     const accentKey = mood || 'blood';
 
-    // RGB 矩陣用於控制玻璃光暈
     const rgbMatrix = {
         light: { blood: '139, 45, 45', curse: '45, 139, 90', ice: '45, 90, 139', undead: '74, 74, 74' },
         dark: { blood: '255, 138, 138', curse: '138, 255, 193', ice: '138, 212, 255', undead: '209, 209, 209' }
