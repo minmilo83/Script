@@ -1,0 +1,29 @@
+name: Script Codex Auto Indexer
+
+on:
+  push:
+    paths:
+      - 'library/**' # 只有當妳更動圖書館內容時才觸發
+
+jobs:
+  update-index:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # 賦予機器人寫入檔案的權限
+    steps:
+      - name: 檢出代碼
+        uses: actions/checkout@v3
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '16'
+
+      - name: 執行掃描腳本
+        run: node assets/scripts/indexer.js
+
+      - name: 自動提交更新
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: "🤖 機器人回報：已自動更新書架索引與章節清單"
+          file_pattern: 'manifest.json library/*/identity.json'
