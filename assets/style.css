@@ -42,76 +42,140 @@ body {
     line-height: 2.3;
     transition: background-color 0.8s ease, color 0.8s ease;
     display: flex;
-    justify-content: center;
+    flex-direction: column;
+    align-items: center;
     min-height: 100vh;
 }
 
-/* 閱讀器排版 */
+/* --- 1. 書架介面佈局 (Grid) --- */
+h1 {
+    margin-top: 60px;
+    letter-spacing: 0.2em;
+    font-weight: 300;
+    opacity: 0.8;
+}
+
+#shelf-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 30px;
+    width: 85%;
+    max-width: 1000px;
+    padding: 40px 0 100px 0;
+}
+
+/* --- 2. 玻璃質感卡片 (.book-card) --- */
+.book-card {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(12px) brightness(1.05);
+    -webkit-backdrop-filter: blur(12px) brightness(1.05);
+    border-radius: 20px;
+    padding: 30px;
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    /* 玻璃邊框與陰影 */
+    border-top: 1.5px solid rgba(255, 255, 255, 0.6);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 15px 35px rgba(0, 0, 0, 0.05),
+        inset 0 0 15px rgba(255, 255, 255, 0.1);
+}
+
+.book-card:hover {
+    transform: translateY(-8px) scale(1.02);
+    box-shadow: 
+        0 25px 50px rgba(0, 0, 0, 0.1),
+        0 0 20px rgba(var(--accent-rgb), 0.2);
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.book-card h3 {
+    margin: 0 0 15px 0;
+    font-size: 1.25em;
+    color: var(--current-accent);
+}
+
+.book-card p {
+    margin: 5px 0;
+    font-size: 0.85em;
+    opacity: 0.7;
+    line-height: 1.5;
+}
+
+/* --- 3. 玻璃質感按鈕 (.back-btn, #reader-nav button) --- */
+.back-btn, #reader-nav button {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.5);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    color: var(--current-text);
+    padding: 10px 24px;
+    border-radius: 50px;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 0.9em;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.back-btn:hover, #reader-nav button:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(var(--accent-rgb), 0.15);
+    color: var(--current-accent);
+}
+
+/* --- 閱讀器排版 --- */
 .reader-container {
     max-width: 750px;
     width: 90%;
     padding: 120px 20px;
     text-align: justify;
-    line-break: strict; /* 避頭尾禁則 */
+    line-break: strict;
 }
 
-/* --- 返回按鈕樣式 --- */
-.back-btn {
-    background: transparent;
-    border: 1px solid var(--current-accent);
-    color: var(--current-accent);
-    padding: 5px 15px;
-    border-radius: 20px;
-    cursor: pointer;
-    font-family: inherit;
-    font-size: 0.9em;
-    transition: all 0.3s ease;
-    margin-bottom: 15px;
-    display: inline-block;
-}
-
-.back-btn:hover {
-    background: var(--current-accent);
-    color: var(--current-bg);
-}
-
-/* --- 標題區域微調 --- */
 #book-header {
-    margin-bottom: 50px;
-    border-bottom: 1px solid rgba(var(--accent-rgb), 0.1);
-    padding-bottom: 20px;
+    width: 100%;
+    max-width: 750px;
+    margin-bottom: 60px;
+    text-align: left;
 }
 
-#current-book-title {
-    margin: 10px 0;
-    font-size: 1.6em;
-    font-weight: 700;
+#reader-nav {
+    display: flex;
+    gap: 20px;
+    margin-top: 80px;
+    padding-bottom: 120px;
 }
 
 /* --- 3D 圓弧玻璃 Dock --- */
 .glass-dock {
     position: fixed;
-    bottom: 50px;
+    bottom: 40px;
     left: 50%;
     transform: translateX(-50%);
     background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(8px) brightness(1.1) saturate(120%);
-    -webkit-backdrop-filter: blur(8px) brightness(1.1) saturate(120%);
+    backdrop-filter: blur(15px) brightness(1.1);
+    -webkit-backdrop-filter: blur(15px) brightness(1.1);
     border-radius: 100px;
     padding: 12px 35px;
     display: flex;
     gap: 20px;
     align-items: center;
     z-index: 1000;
-    
-    /* 物理 3D 光學細節 */
     border-top: 2px solid rgba(255, 255, 255, 0.7);
     border-left: 1px solid rgba(255, 255, 255, 0.2);
     box-shadow: 
-        0 30px 60px rgba(0, 0, 0, 0.35),            /* 落地陰影 */
-        0 15px 40px rgba(var(--accent-rgb), 0.45),  /* 彩色落地光暈 */
-        inset 0 0 12px rgba(255, 255, 255, 0.2);   /* 內部折射 */
-    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        0 30px 60px rgba(0, 0, 0, 0.3),
+        0 15px 40px rgba(var(--accent-rgb), 0.4);
+    transition: all 0.5s ease;
 }
 
 .swatch {
@@ -137,27 +201,12 @@ body {
 
 /* --- 動態解析樣式 --- */
 .line { margin-bottom: 1.5em; }
-
-.title { font-size: 1.8em; font-weight: 300; letter-spacing: 0.3em; text-align: center; margin-bottom: 60px; opacity: 0.8; }
-
-.dialogue { font-weight: 500; color: var(--current-text); }
-
+.dialogue { font-weight: 500; }
 .thought { opacity: 0.6; font-size: 0.95em; }
-
-.system-text { 
-    font-weight: 800; 
-    color: var(--current-accent); 
-    margin: 40px 0; 
-    letter-spacing: 0.12em; 
-}
-
-.stat-highlight { 
-    font-weight: 900; 
-    color: var(--current-accent); 
-    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.2); 
-}
+.system-text { font-weight: 800; color: var(--current-accent); margin: 40px 0; }
+.stat-highlight { font-weight: 900; color: var(--current-accent); }
 
 /* 模式類別切換 */
-body.mode-black { --current-bg: var(--bg-black); }
+body.mode-black { --current-bg: var(--bg-black); --current-text: #eee; }
 body.mode-white { --current-bg: var(--bg-white); }
 body.mode-beige { --current-bg: var(--bg-beige); }
