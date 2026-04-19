@@ -1,5 +1,9 @@
 {
   "title": "使用簡介",
   "category": "平台使用守則",
-  "scripts": []
+  "scripts": [
+    {
+      "file": "0.txt"
+    }
+  ]
 }
