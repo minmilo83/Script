@@ -12,6 +12,12 @@
       "title": "深海之約 (測試用)",
       "path": "library/demo2/",
       "category": "未分類"
+    },
+    {
+      "id": "mimi-daily",
+      "title": "Mimi 的開發日誌",
+      "path": "library/mimi-daily/",
+      "category": "隨筆"
     }
   ]
 }
