@@ -2,12 +2,6 @@
   "library_name": "Script Codex",
   "books": [
     {
-      "id": "demo-book",
-      "title": "Script 開發日誌",
-      "path": "library/demo-book/",
-      "category": "未分類"
-    },
-    {
       "id": "demo2",
       "title": "深海之約 (測試用)",
       "path": "library/demo2/",
