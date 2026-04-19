@@ -1,0 +1,8 @@
+{
+  "title": "Script 開發日誌",
+  "author": "Mimi",
+  "vibe": "Minimalist",
+  "scripts": [
+    { "chapter": 1, "title": "這是一個開始", "file": "scripts/script-01.html" }
+  ]
+}
