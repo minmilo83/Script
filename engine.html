@@ -3,17 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reading...</title>
+    <title>Reading... | Script Codex</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
-<body>
-    <div id="reader-container">
+<body class="mode-beige"> <div id="reader-container">
         <header id="book-header">
-            <button onclick="location.href='shelf.html'">← 返回書架</button>
+            <button onclick="location.href='shelf.html'" class="back-btn">← 返回書架</button>
             <h2 id="current-book-title">載入中...</h2>
         </header>
 
-        <main id="script-content">
+        <main id="script-content" class="reader-container">
             <p>正在翻開書頁...</p>
         </main>
 
@@ -22,6 +21,21 @@
             <button id="next-btn">下一章</button>
         </nav>
     </div>
+
+    <nav class="glass-dock">
+        <div class="swatch-group" style="display: flex; gap: 15px;">
+            <div class="swatch white" onclick="setMode('white')"></div>
+            <div class="swatch beige" onclick="setMode('beige')"></div>
+            <div class="swatch black" onclick="setMode('black')"></div>
+        </div>
+        <div class="divider"></div>
+        <div class="swatch-group" style="display: flex; gap: 15px;">
+            <div class="swatch mood-blood" onclick="setMood('blood')"></div>
+            <div class="swatch mood-curse" onclick="setMood('curse')"></div>
+            <div class="swatch mood-ice" onclick="setMood('ice')"></div>
+            <div class="swatch mood-undead" onclick="setMood('undead')"></div>
+        </div>
+    </nav>
 
     <script src="assets/core.js"></script>
 </body>
