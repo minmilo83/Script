@@ -1,83 +1,130 @@
 /* 核心變數設定 */
 :root {
-    /* 預設米色模式 (Paper Beige) */
-    --bg-color: #f4f1ea;
-    --glass-bg: rgba(255, 255, 255, 0.4);
-    --text-color: #333333;
-    --accent-color: #8b0000;
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+    /* 背景定義 */
+    --bg-white: #ffffff;
+    --bg-beige: #f4f1ea;
+    --bg-black: #0d0d0d;
+
+    /* 清透墨色系 (Ink) - 亮色背景專用 */
+    --ink-blood: #8b2d2d;
+    --ink-curse: #2d8b5a;
+    --ink-ice: #2d5a8b;
+    --ink-undead: #4a4a4a;
+    --ink-rgb-blood: 139, 45, 45;
+    --ink-rgb-curse: 45, 139, 90;
+    --ink-rgb-ice: 45, 90, 139;
+    --ink-rgb-undead: 74, 74, 74;
+
+    /* 冰色系 (Ice) - 黑色背景專用 */
+    --ice-blood: #ff8a8a;
+    --ice-curse: #8affc1;
+    --ice-ice: #8ad4ff;
+    --ice-undead: #d1d1d1;
+    --ice-rgb-blood: 255, 138, 138;
+    --ice-rgb-curse: 138, 255, 193;
+    --ice-rgb-ice: 138, 212, 255;
+    --ice-rgb-undead: 209, 209, 209;
+
+    /* 預設變數 */
+    --current-bg: var(--bg-beige);
+    --current-text: var(--ink-undead);
+    --current-accent: var(--ink-blood);
+    --accent-rgb: var(--ink-rgb-blood);
 }
 
-/* 黑色模式 (Deep Night) */
-[data-theme="dark"] {
-    --bg-color: #121212;
-    --glass-bg: rgba(30, 30, 30, 0.6);
-    --text-color: #e0e0e0;
-    --accent-color: #ff4d4d;
-    --glass-border: rgba(255, 255, 255, 0.1);
-}
-
-/* 純白模式 (Pure White) */
-[data-theme="white"] {
-    --bg-color: #ffffff;
-    --glass-bg: rgba(255, 255, 255, 0.7);
-    --text-color: #1a1a1a;
-    --accent-color: #000000;
-    --glass-border: rgba(0, 0, 0, 0.05);
-}
-
+/* 基礎重置 */
 body {
-    background-color: var(--bg-color);
-    background-image: url("https://www.transparenttextures.com/patterns/paper-fibers.png"); /* 紙張紋理 */
-    color: var(--text-color);
-    font-family: 'Noto Serif TC', serif;
     margin: 0;
-    transition: background-color 0.5s ease;
+    padding: 0;
+    background-color: var(--current-bg);
+    color: var(--current-text);
+    font-family: "Noto Serif TC", serif;
+    line-height: 2.3;
+    transition: background-color 0.8s ease, color 0.8s ease;
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
 }
 
-/* 通透感的 Liquid Glass 容器 */
-#reader-container, .book-card {
-    background: var(--glass-bg);
-    backdrop-filter: blur(12px); /* 毛玻璃核心 */
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow);
-    border-radius: 2px;
-}
-
-#reader-container {
-    max-width: 800px;
+/* 閱讀器排版 */
+.reader-container {
+    max-width: 750px;
     width: 90%;
-    margin: 40px 0;
-    padding: 60px 40px;
-    line-height: 2.2;
-    letter-spacing: 0.05em;
-}
-
-/* 主題切換按鈕區 */
-.theme-switcher {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    display: flex;
-    gap: 10px;
-    z-index: 1000;
-}
-
-.theme-btn {
-    width: 25px;
-    height: 25px;
-    border-radius: 50%;
-    border: 1px solid var(--text-color);
-    cursor: pointer;
-}
-
-/* 長文測試樣式 */
-#script-content p {
-    margin-bottom: 2em;
+    padding: 120px 20px;
     text-align: justify;
+    line-break: strict; /* 避頭尾禁則 */
 }
+
+/* --- 3D 圓弧玻璃 Dock --- */
+.glass-dock {
+    position: fixed;
+    bottom: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(8px) brightness(1.1) saturate(120%);
+    -webkit-backdrop-filter: blur(8px) brightness(1.1) saturate(120%);
+    border-radius: 100px;
+    padding: 12px 35px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    z-index: 1000;
+    
+    /* 物理 3D 光學細節 */
+    border-top: 2px solid rgba(255, 255, 255, 0.7);
+    border-left: 1px solid rgba(255, 255, 255, 0.2);
+    box-shadow: 
+        0 30px 60px rgba(0, 0, 0, 0.35),            /* 落地陰影 */
+        0 15px 40px rgba(var(--accent-rgb), 0.45),  /* 彩色落地光暈 */
+        inset 0 0 12px rgba(255, 255, 255, 0.2);   /* 內部折射 */
+    transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid rgba(255,255,255,0.4);
+    transition: transform 0.3s ease;
+}
+.swatch:hover { transform: scale(1.2) translateY(-3px); }
+
+.divider { width: 1px; height: 18px; background: rgba(255,255,255,0.2); }
+
+/* 控制按鈕色樣 */
+.white { background: #fff; }
+.beige { background: #f4f1ea; }
+.black { background: #0d0d0d; }
+.mood-blood { background: var(--ink-blood); }
+.mood-curse { background: var(--ink-curse); }
+.mood-ice { background: var(--ink-ice); }
+.mood-undead { background: var(--ink-undead); }
+
+/* --- 動態解析樣式 --- */
+.line { margin-bottom: 1.5em; }
+
+.title { font-size: 1.8em; font-weight: 300; letter-spacing: 0.3em; text-align: center; margin-bottom: 60px; opacity: 0.8; }
+
+.dialogue { font-weight: 500; color: var(--current-text); }
+
+.thought { opacity: 0.6; font-size: 0.95em; }
+
+.system-text { 
+    font-weight: 800; 
+    color: var(--current-accent); 
+    margin: 40px 0; 
+    letter-spacing: 0.12em; 
+}
+
+.stat-highlight { 
+    font-weight: 900; 
+    color: var(--current-accent); 
+    text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.2); 
+}
+
+/* 模式類別切換 */
+body.mode-black { --current-bg: var(--bg-black); }
+body.mode-white { --current-bg: var(--bg-white); }
+body.mode-beige { --current-bg: var(--bg-beige); }
