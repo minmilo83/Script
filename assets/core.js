@@ -1,6 +1,6 @@
 /**
- * Script Codex - Core Engine V1.1
- * 核心引擎：偵測頁面並啟動對應功能，並整合閱讀流轉邏輯
+ * Script Codex - Core Engine V1.2
+ * 核心引擎：偵測頁面並啟動對應功能，並整合閱讀流轉邏輯與動態淡入特效
  */
 
 // 全域狀態：追蹤當前書籍與章節
@@ -93,23 +93,33 @@ function setupNavigation() {
     }
 }
 
-// --- 載入特定章節並渲染 ---
+// --- 載入特定章節並渲染 (含淡入動畫控制) ---
 async function fetchChapter(index) {
     const contentArea = document.getElementById('script-content');
+    const container = document.querySelector('.reader-container');
     if (!contentArea || !currentChapters[index]) return;
 
     try {
         currentIndex = index;
         const fileName = currentChapters[currentIndex].file;
 
-        // 抓取 TXT 內容
+        // 1. 抓取 TXT 內容
         const scriptResponse = await fetch(`library/${currentBookId}/${fileName}`);
         const rawContent = await scriptResponse.text();
         
-        // 渲染內容
+        // 2. 重置動畫：移除類別以準備重新觸發
+        if (container) container.classList.remove('fade-in-active');
+
+        // 3. 渲染內容
         contentArea.innerHTML = parseCodexContent(rawContent);
 
-        // 更新按鈕樣式與網址
+        // 4. 觸發動畫：強制重繪 (reflow) 並加上類別
+        if (container) {
+            void container.offsetWidth; // 強制重繪技巧
+            container.classList.add('fade-in-active');
+        }
+
+        // 5. 更新按鈕樣式與網址
         updateNavUI();
         window.scrollTo({ top: 0, behavior: 'smooth' });
 
@@ -122,7 +132,7 @@ async function fetchChapter(index) {
     }
 }
 
-// 更新導航按鈕的視覺狀態（第一章禁回退，末章禁前進）
+// 更新導航按鈕的視覺狀態
 function updateNavUI() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
@@ -147,27 +157,23 @@ function parseCodexContent(text) {
     lines.forEach((line) => {
         let trimmedLine = line.trim();
         if (!trimmedLine) {
-            htmlOutput += `<div style="height: 1.2em;"></div>`; // 處理空行
+            htmlOutput += `<div style="height: 1.2em;"></div>`; 
             return;
         }
 
-        // 1. 系統訊息：以 ─ 開頭
         if (trimmedLine.startsWith('─')) {
             htmlOutput += `<div class="system-text">${trimmedLine}</div>`;
             return;
         }
 
-        // 2. 對白偵測：加粗引號內容
         if (trimmedLine.includes('「')) {
             trimmedLine = trimmedLine.replace(/「(.*?)」/g, '<span class="dialogue">「$1」</span>');
         }
 
-        // 3. 內心獨白：處理小括號
         if (trimmedLine.includes('（')) {
             trimmedLine = `<span class="thought">${trimmedLine}</span>`;
         }
 
-        // 4. 數據與百分比強調
         trimmedLine = trimmedLine.replace(/(\d+(\.\d+)?(次|則|「1」|％|%|層|級|點))/g, '<span class="stat-highlight">$1</span>');
 
         htmlOutput += `<p class="line">${trimmedLine}</p>`;
@@ -178,27 +184,21 @@ function parseCodexContent(text) {
 
 // --- 主題切換邏輯 ---
 
-// 切換背景模式 (white, beige, black)
 function setMode(mode) {
     document.body.className = `mode-${mode}`;
-    updateThemeEffects(mode, null); // 更新對應的 RGB 發光值
+    updateThemeEffects(mode, null); 
 }
 
-// 切換意境顏色 (blood, curse, ice, undead)
 function setMood(mood) {
-    // 從 classList 中精確抓取當前的 mode
     const currentClass = Array.from(document.body.classList).find(c => c.startsWith('mode-'));
     const currentMode = currentClass ? currentClass.replace('mode-', '') : 'beige';
-    
     updateThemeEffects(currentMode, mood);
 }
 
-// 物理光學同步：更新 CSS 變數中的 RGB 值，產生玻璃落地光暈效果
 function updateThemeEffects(bg, mood) {
     const isDark = bg === 'black';
-    const accentKey = mood || 'blood'; // 若無指定則預設為 blood
+    const accentKey = mood || 'blood'; 
 
-    // 對應 style.css 中的顏色變數
     const rgbMatrix = {
         light: { 
             blood: '139, 45, 45', 
@@ -215,15 +215,11 @@ function updateThemeEffects(bg, mood) {
     };
 
     const rgbValue = rgbMatrix[isDark ? 'dark' : 'light'][accentKey];
-    
-    // 注入全域 CSS 變數
     document.documentElement.style.setProperty('--accent-rgb', rgbValue);
     
-    // 如果是 Mood 切換，也要更新主色調變數
     const colorHex = isDark ? `var(--ice-${accentKey})` : `var(--ink-${accentKey})`;
     document.documentElement.style.setProperty('--current-accent', colorHex);
 }
 
-// 將函數暴露至全域，確保 HTML onclick 能觸發
 window.setMode = setMode;
 window.setMood = setMood;
