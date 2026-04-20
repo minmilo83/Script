@@ -4,26 +4,38 @@
     {
       "id": "demo2",
       "title": "深海之約 (測試用)",
+      "author": "Mimi",
       "path": "library/demo2/",
-      "category": "未分類"
+      "category": "奇幻小說",
+      "order": 1,
+      "last_updated": "2026-04-20"
     },
     {
       "id": "mimi-daily",
       "title": "Mimi 的開發日誌",
+      "author": "未知",
       "path": "library/mimi-daily/",
-      "category": "隨筆"
+      "category": "隨筆",
+      "order": 999,
+      "last_updated": "2026-04-20"
     },
     {
       "id": "使用簡介",
       "title": "使用簡介",
+      "author": "未知",
       "path": "library/使用簡介/",
-      "category": "平台使用守則"
+      "category": "平台使用守則",
+      "order": 999,
+      "last_updated": "2026-04-20"
     },
     {
       "id": "異之領域",
       "title": "異之領域",
+      "author": "未知",
       "path": "library/異之領域/",
-      "category": "一個異世界的狂想故事"
+      "category": "一個異世界的狂想故事",
+      "order": 999,
+      "last_updated": "2026-04-20"
     }
   ]
 }
