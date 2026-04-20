@@ -4,42 +4,57 @@ const path = require('path');
 const libraryPath = path.join(__dirname, '../../library');
 const manifestPath = path.join(__dirname, '../../manifest.json');
 
-// 1. 掃描 library 資料夾下的所有子目錄
-const books = fs.readdirSync(libraryPath).filter(file => {
-    return fs.statSync(path.join(libraryPath, file)).isDirectory();
-});
+function generateIndex() {
+    const manifest = {
+        library_name: "Script Codex",
+        books: []
+    };
 
-const manifestData = {
-    library_name: "Script Codex",
-    books: []
-};
+    // 讀取 library 下的所有資料夾
+    const bookDirs = fs.readdirSync(libraryPath).filter(file => {
+        return fs.statSync(path.join(libraryPath, file)).isDirectory();
+    });
 
-books.forEach(bookId => {
-    const bookDir = path.join(libraryPath, bookId);
-    const idPath = path.join(bookDir, 'identity.json');
-
-    // 檢查是否有 identity.json，以此作為書籍標題來源
-    if (fs.existsSync(idPath)) {
-        const idData = JSON.parse(fs.readFileSync(idPath, 'utf8'));
+    bookDirs.forEach(dir => {
+        const identityPath = path.join(libraryPath, dir, 'identity.json');
         
-        manifestData.books.push({
-            id: bookId,
-            title: idData.title || bookId,
-            path: `library/${bookId}/`,
-            category: idData.category || "未分類" // 妳可以在 identity.json 加這行
-        });
+        if (fs.existsSync(identityPath)) {
+            const identity = JSON.parse(fs.readFileSync(identityPath, 'utf8'));
+            
+            // 自動抓取該書本內所有 .txt 檔案的最新修改日期
+            let latestDate = 0;
+            if (identity.scripts && identity.scripts.length > 0) {
+                identity.scripts.forEach(script => {
+                    const scriptPath = path.join(libraryPath, dir, script.file);
+                    if (fs.existsSync(scriptPath)) {
+                        const stats = fs.statSync(scriptPath);
+                        if (stats.mtimeMs > latestDate) {
+                            latestDate = stats.mtimeMs; // 記錄最晚的修改時間
+                        }
+                    }
+                });
+            }
+            
+            // 格式化日期為 YYYY-MM-DD
+            const updateDate = latestDate > 0 ? new Date(latestDate).toISOString().split('T')[0] : '未知';
 
-        // 自動掃描該書資料夾下的所有 .txt，按檔名排序更新 identity.json
-        const txtFiles = fs.readdirSync(bookDir)
-            .filter(f => f.endsWith('.txt'))
-            .sort((a, b) => a.localeCompare(b, undefined, {numeric: true}))
-            .map(f => ({ file: f }));
+            manifest.books.push({
+                id: dir,
+                title: identity.title || dir,
+                author: identity.author || "未知", 
+                path: `library/${dir}/`,
+                category: identity.category || "未分類",
+                order: identity.order || 999, // 若未設定 order，預設排到最後
+                last_updated: updateDate
+            });
+        }
+    });
 
-        idData.scripts = txtFiles;
-        fs.writeFileSync(idPath, JSON.stringify(idData, null, 2));
-    }
-});
+    // 依照 order 權重進行排序 (數字越小，排越前面)
+    manifest.books.sort((a, b) => a.order - b.order);
 
-// 2. 寫入總目錄 manifest.json
-fs.writeFileSync(manifestPath, JSON.stringify(manifestData, null, 2));
-console.log('✅ 機器人已成功同步書架與章節！');
+    fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2));
+    console.log("✅ [MimiBot] manifest.json 自動抓取日期與排序完成！");
+}
+
+generateIndex();
