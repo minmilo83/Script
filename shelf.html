@@ -3,14 +3,30 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>我的 Script 藏書閣</title>
+    <title>我的 Script 藏書閣 | V2.5</title>
     <link rel="stylesheet" href="assets/style.css">
 </head>
 <body class="mode-beige">
-    <h1>Script Codex</h1>
+    
+    <div class="shelf-header">
+        <h1 id="welcome-title">Script Codex</h1>
+        <div class="search-box">
+            <span style="opacity: 0.5;">🔍</span>
+            <input type="text" id="search-input" placeholder="搜尋書名、作者或標籤...">
+        </div>
+    </div>
     
     <div id="shelf-container">
         <p>正在加載書架內容...</p>
+    </div>
+
+    <div id="welcome-modal" class="modal-overlay">
+        <div class="glass-modal">
+            <h2>初次見面</h2>
+            <p style="opacity: 0.8; margin-bottom: 20px;">請輸入您的稱呼，開啟專屬藏書閣。</p>
+            <input type="text" id="username-input" class="glass-input" placeholder="例如：Mimi">
+            <button class="back-btn" onclick="saveUsername()">進入書架</button>
+        </div>
     </div>
     
     <script src="assets/core.js"></script>
