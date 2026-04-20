@@ -1,6 +1,8 @@
 {
   "title": "使用簡介",
+  "author": "Mimi",
   "category": "平台使用守則",
+  "order": 3,
   "scripts": [
     {
       "file": "0簡介.txt"
