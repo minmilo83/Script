@@ -1,6 +1,8 @@
 {
   "title": "異之領域",
+  "author": "Minmilo83",
   "category": "一個異世界的狂想故事",
+  "order": 4,
   "scripts": [
     {
       "file": "0.txt"
