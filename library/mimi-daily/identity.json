@@ -1,6 +1,8 @@
 {
   "title": "Mimi 的開發日誌",
+  "author": "Mimi",
   "category": "隨筆",
+  "order": 2,
   "scripts": [
     {
       "file": "1.txt"
