@@ -1,433 +1,341 @@
 /**
- * Script Codex - Core Engine V2.5
- * 核心引擎：支援 Markdown 新語法、沉浸式閱讀體驗、本地記憶與書架動態過濾
+ * Script Codex - Core Engine V3.0 (Mimi Private Edition)
+ * 核心美學：墨影琉璃、極致沈浸、全玻璃化交互
  */
 
-// 全域狀態
-let currentBookId = "";
-let currentChapters = [];
-let currentIndex = 0;
-let allBooksData = []; // 用於搜尋過濾
+// --- 全域狀態管理 ---
+const CodexState = {
+    currentBook: null,
+    currentChapters: [],
+    currentIndex: 0,
+    nickname: localStorage.getItem('codex_nickname') || "",
+    favorites: JSON.parse(localStorage.getItem('codex_favorites')) || [],
+    fontSize: parseInt(localStorage.getItem('codex_font_size')) || 18,
+    isUIHidden: false
+};
 
-// UI 狀態
-let isUiVisible = true;
-let scrollTimeout;
-
+// --- 初始化啟動器 ---
 document.addEventListener('DOMContentLoaded', () => {
-    // 1. 初始化使用者偏好 (字體與主題)
-    initUserPreferences();
-
+    initGlobalEvents();
+    
     const path = window.location.pathname;
-
-    // 2. 根據網址判斷頁面邏輯
     if (path.includes('shelf.html') || path.endsWith('/') || path.endsWith('index.html')) {
-        checkUserIdentity(); // 檢查暱稱並顯示歡迎語
-        loadShelf();
+        initShelf();
     } else if (path.includes('engine.html')) {
-        loadReader();
-        initReaderInteractions(); // 啟動沉浸模式與事件監聽
+        initReader();
     }
 });
 
-// ==========================================
-// 📚 書架與全局功能 (Shelf & Global)
-// ==========================================
-
-// --- 檢查使用者暱稱與歡迎語 ---
-function checkUserIdentity() {
-    const username = localStorage.getItem('mimi-username');
-    const headerTitle = document.getElementById('welcome-title');
-    
-    if (username) {
-        if (headerTitle) headerTitle.innerText = `${username}，${getGreeting()}。`;
-    } else {
-        // 若無暱稱，呼叫玻璃輸入盒
-        const modal = document.getElementById('welcome-modal');
-        if (modal) {
-            modal.classList.add('active');
-            document.body.style.overflow = 'hidden'; // 防止背景滾動
+// --- 1. 全域事件 (Ghost UI & 通用按鈕) ---
+function initGlobalEvents() {
+    // 捲動時隱藏 UI
+    let scrollTimer;
+    window.addEventListener('scroll', () => {
+        if (!CodexState.isUIHidden) {
+            toggleUI(true);
         }
-    }
+        // 停止捲動後一段時間不自動恢復，必須透過點擊
+    }, { passive: true });
+
+    // 點擊畫面顯示 UI
+    document.body.addEventListener('click', (e) => {
+        // 如果點擊的是按鈕本身則不觸發切換邏輯
+        if (e.target.closest('.glass-btn') || e.target.closest('.swatch') || e.target.closest('.glass-input')) return;
+        
+        if (CodexState.isUIHidden) {
+            toggleUI(false);
+        }
+    });
 }
 
-function saveUsername() {
-    const input = document.getElementById('username-input');
-    if (input && input.value.trim() !== "") {
-        localStorage.setItem('mimi-username', input.value.trim());
-        const modal = document.getElementById('welcome-modal');
-        if (modal) modal.classList.remove('active');
-        document.body.style.overflow = 'auto';
-        checkUserIdentity();
-    }
+function toggleUI(hide) {
+    const uiElements = document.querySelectorAll('.ui-element, .glass-dock, #side-progress-track, .back-btn');
+    CodexState.isUIHidden = hide;
+    uiElements.forEach(el => {
+        if (hide) el.classList.add('ui-hidden');
+        else el.classList.remove('ui-hidden');
+    });
 }
 
-function getGreeting() {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 11) return "早安";
-    if (hour >= 11 && hour < 17) return "午安";
-    return "晚安";
-}
-
-// --- 書架邏輯：讀取、渲染與搜尋 ---
-async function loadShelf() {
+// --- 2. 書架邏輯 (Shelf) ---
+async function initShelf() {
+    checkNickname();
     const container = document.getElementById('shelf-container');
-    if (!container) return;
-
+    const searchInput = document.querySelector('.glass-input');
+    
     try {
         const response = await fetch('manifest.json');
         const data = await response.json();
-        allBooksData = data.books; // 儲存全域資料供搜尋使用
-        
-        renderShelf(allBooksData);
+        const books = data.books; // 這裡假設 indexer.js 已排好序
 
-        // 綁定搜尋事件
-        const searchInput = document.getElementById('search-input');
+        const renderBooks = (filterText = "") => {
+            const filtered = books.filter(b => 
+                b.title.includes(filterText) || 
+                b.category.includes(filterText) || 
+                (b.author && b.author.includes(filterText))
+            );
+
+            container.innerHTML = filtered.map(book => {
+                const isFav = CodexState.favorites.includes(book.id);
+                return `
+                <div class="book-card glass-module" onclick="location.href='engine.html?book=${book.id}'">
+                    <div style="display:flex; justify-content:space-between; align-items:start;">
+                        <h3 style="margin:0">${book.title}</h3>
+                        ${isFav ? '<span style="color:#ff8a8a">♥</span>' : ''}
+                    </div>
+                    <p style="font-size:0.85rem; opacity:0.7; margin:8px 0">作者：${book.author || '佚名'}</p>
+                    <p style="font-size:0.8rem; margin:4px 0">標籤：${book.category}</p>
+                    <p style="font-size:0.7rem; opacity:0.5">更新：${book.last_updated || '未知'}</p>
+                </div>
+            `}).join('');
+        };
+
+        // 監聽搜尋
         if (searchInput) {
-            searchInput.addEventListener('input', (e) => {
-                const keyword = e.target.value.toLowerCase();
-                const filtered = allBooksData.filter(book => 
-                    book.title.toLowerCase().includes(keyword) || 
-                    (book.author && book.author.toLowerCase().includes(keyword)) ||
-                    book.category.toLowerCase().includes(keyword)
-                );
-                renderShelf(filtered);
-            });
+            searchInput.addEventListener('input', (e) => renderBooks(e.target.value));
         }
+
+        renderBooks();
+        updateGreeting();
+
     } catch (e) {
-        container.innerHTML = "<div class='system-text'>─[系統錯誤：無法讀取藏書閣數據]─</div>";
-        console.error("Shelf Load Error:", e);
+        console.error("無法載入書架資料", e);
     }
 }
 
-function renderShelf(books) {
-    const container = document.getElementById('shelf-container');
-    if (!container) return;
-
-    if (books.length === 0) {
-        container.innerHTML = "<p class='line' style='text-align:center;'>找不到相符的藏書。</p>";
-        return;
+// 暱稱檢查與蓋台
+function checkNickname() {
+    if (!CodexState.nickname) {
+        const overlay = document.createElement('div');
+        overlay.className = 'full-overlay';
+        overlay.innerHTML = `
+            <div class="overlay-card glass-module">
+                <div class="glass-close" onclick="this.parentElement.parentElement.remove()"></div>
+                <h2 style="margin-top:0">歡迎來到墨影琉璃</h2>
+                <p>請輸入您的專屬暱稱以開啟旅程</p>
+                <input type="text" id="nn-input" class="glass-input" placeholder="您的暱稱..." style="width:80%; margin-bottom:20px">
+                <button class="glass-btn" onclick="saveNickname()" style="margin: 0 auto">進入藏書閣</button>
+            </div>
+        `;
+        document.body.appendChild(overlay);
     }
-
-    container.innerHTML = books.map(book => `
-        <div class="book-card" onclick="location.href='engine.html?book=${book.id}'">
-            <h3>${book.title}</h3>
-            <p>作者：${book.author || '未知'}</p>
-            <p>分類：${book.category}</p>
-            <p style="font-size: 0.75em; opacity: 0.5;">最新更新：${book.last_updated || '未知'}</p>
-        </div>
-    `).join('');
 }
 
+function saveNickname() {
+    const val = document.getElementById('nn-input').value.trim();
+    if (val) {
+        localStorage.setItem('codex_nickname', val);
+        CodexState.nickname = val;
+        location.reload();
+    }
+}
 
-// ==========================================
-// 📖 閱讀器核心引擎 (Reader Engine)
-// ==========================================
+function updateGreeting() {
+    const header = document.getElementById('shelf-header');
+    if (!header || !CodexState.nickname) return;
+    
+    const hour = new Date().getHours();
+    let greet = "早安";
+    if (hour >= 12 && hour < 18) greet = "午安";
+    if (hour >= 18 || hour < 5) greet = "晚安";
+    
+    const welcomeArea = document.createElement('div');
+    welcomeArea.innerHTML = `<h2 style="margin-bottom:0">${CodexState.nickname}，${greet}。</h2>`;
+    header.prepend(welcomeArea);
+}
 
-async function loadReader() {
+// --- 3. 閱讀引擎邏輯 (Reader) ---
+async function initReader() {
     const params = new URLSearchParams(window.location.search);
-    currentBookId = params.get('book');
-    const contentArea = document.getElementById('script-content');
+    const bookId = params.get('book');
+    const chapterIdx = parseInt(params.get('ch')) || 0;
 
-    if (!currentBookId) {
-        if (contentArea) contentArea.innerHTML = "<p class='line'>未指定書籍，請返回書架。</p>";
-        return;
-    }
+    if (!bookId) return location.href = 'shelf.html';
 
     try {
-        // 1. 抓取書籍身份資料
-        const idResponse = await fetch(`library/${currentBookId}/identity.json`);
-        const bookInfo = await idResponse.json();
-        document.getElementById('current-book-title').innerText = bookInfo.title;
-
-        // 2. 儲存章節清單
-        currentChapters = bookInfo.scripts;
-        const chParam = params.get('ch');
-        currentIndex = chParam ? parseInt(chParam) : 0;
-
-        // 3. 初始化功能
-        setupNavigation();
-        checkHeartStatus(); // 檢查愛心狀態
-
-        // 4. 載入第一筆內容
-        fetchChapter(currentIndex);
-
-    } catch (e) {
-        if (contentArea) contentArea.innerHTML = "<div class='system-text'>─[錯誤：無法開啟書頁，可能檔案不存在]─</div>";
-        console.error("Reader Load Error:", e);
-    }
-}
-
-async function fetchChapter(index) {
-    const contentArea = document.getElementById('script-content');
-    const container = document.querySelector('.reader-container');
-    if (!contentArea || !currentChapters[index]) return;
-
-    try {
-        currentIndex = index;
-        const fileName = currentChapters[currentIndex].file;
-
-        const scriptResponse = await fetch(`library/${currentBookId}/${fileName}`);
-        const rawContent = await scriptResponse.text();
+        const response = await fetch(`library/${bookId}/identity.json`);
+        const bookData = await bookDataFetch(response, bookId);
         
-        if (container) container.classList.remove('fade-in-active');
+        CodexState.currentBook = bookData;
+        CodexState.currentChapters = bookData.scripts;
+        CodexState.currentIndex = chapterIdx;
 
-        // 解析 Markdown 並渲染
-        contentArea.innerHTML = parseCodexContent(rawContent);
-
-        if (container) {
-            void container.offsetWidth; 
-            container.classList.add('fade-in-active');
-        }
-
-        // 更新狀態
-        updateNavUI();
-        markChapterAsRead(currentIndex);
-        window.scrollTo({ top: 0, behavior: 'auto' });
-        updateProgressBar(); // 重置進度條
-
-        // 更新網址
-        const newUrl = `${window.location.pathname}?book=${currentBookId}&ch=${currentIndex}`;
-        window.history.replaceState({ path: newUrl }, '', newUrl);
-
+        loadChapter(chapterIdx);
+        initSideProgress();
+        updateFavoriteIcon();
     } catch (e) {
-        contentArea.innerHTML = "<div class='system-text'>─[錯誤：無法讀取章節內容]─</div>";
+        console.error("讀取書籍失敗", e);
     }
 }
 
-// ==========================================
-// 🖋️ Markdown 解析引擎 (Parser)
-// ==========================================
+// 輔助：讀取 identity.json
+async function bookDataFetch(res, id) {
+    const data = await res.json();
+    data.id = id;
+    return data;
+}
 
+async function loadChapter(idx) {
+    const contentArea = document.getElementById('script-content');
+    const titleArea = document.getElementById('current-book-title');
+    const chapter = CodexState.currentChapters[idx];
+
+    if (!chapter) return;
+
+    try {
+        const res = await fetch(`library/${CodexState.currentBook.id}/${chapter.file}`);
+        const text = await res.text();
+        
+        // 更新標題：書名 + 章節數
+        const pageTitle = `${CodexState.currentBook.title} - 第 ${idx + 1} 章`;
+        document.title = pageTitle;
+        if (titleArea) titleArea.innerText = pageTitle;
+
+        contentArea.innerHTML = parseCodexContent(text);
+        window.scrollTo(0, 0);
+        
+        // 更新按鈕狀態
+        document.getElementById('prev-btn').disabled = (idx === 0);
+        document.getElementById('next-btn').disabled = (idx === CodexState.currentChapters.length - 1);
+        
+        // 更新章節跳轉事件
+        document.getElementById('prev-btn').onclick = () => switchChapter(idx - 1);
+        document.getElementById('next-btn').onclick = () => switchChapter(idx + 1);
+        
+        applyFontSize();
+    } catch (e) {
+        contentArea.innerHTML = "無法載入章節內容。";
+    }
+}
+
+function switchChapter(idx) {
+    if (idx < 0 || idx >= CodexState.currentChapters.length) return;
+    const url = new URL(window.location);
+    url.searchParams.set('ch', idx);
+    window.history.pushState({}, '', url);
+    loadChapter(idx);
+}
+
+// --- 4. V3 新版解析引擎 (Regex) ---
 function parseCodexContent(text) {
-    const lines = text.trim().split('\n');
-    let htmlOutput = '';
+    const lines = text.split('\n');
+    let htmlOutput = "";
 
-    lines.forEach((line) => {
-        let trimmedLine = line.trim();
-        if (!trimmedLine) {
-            htmlOutput += `<div style="height: 1.5em;"></div>`; 
+    lines.forEach(line => {
+        let trimmed = line.trim();
+        if (!trimmed) {
+            htmlOutput += `<br>`;
             return;
         }
 
-        // 1. 系統分隔線
-        if (trimmedLine.startsWith('─')) {
-            htmlOutput += `<div class="system-text">${trimmedLine}</div>`;
+        // 系統線處理 (不變動)
+        if (trimmed.startsWith('─')) {
+            htmlOutput += `<p style="text-align:center; opacity:0.5; font-size:0.9em">${trimmed}</p>`;
             return;
         }
 
-        // 2. 為了避免正則衝突，使用佔位符替換法 (由長到短)
-        // 大標題 ***文字***
-        trimmedLine = trimmedLine.replace(/\*\*\*(.*?)\*\*\*/g, '%%L%%$1%%EL%%');
-        // 小標題 **文字**
-        trimmedLine = trimmedLine.replace(/\*\*(.*?)\*\*/g, '%%S%%$1%%ES%%');
-        // 粗體 *文字*
-        trimmedLine = trimmedLine.replace(/\*(.*?)\*/g, '%%B%%$1%%EB%%');
-        // 內心獨白 //文字//
-        trimmedLine = trimmedLine.replace(/\/\/(.*?)\/\//g, '%%T%%$1%%ET%%');
-        // 斜體 /文字/
-        trimmedLine = trimmedLine.replace(/\/(.*?)\//g, '%%I%%$1%%EI%%');
-
-        // 3. 還原 HTML 標籤 (符號消失)
-        trimmedLine = trimmedLine.replace(/%%L%%(.*?)%%EL%%/g, '<span class="title-large">$1</span>');
-        trimmedLine = trimmedLine.replace(/%%S%%(.*?)%%ES%%/g, '<span class="title-small">$1</span>');
-        trimmedLine = trimmedLine.replace(/%%B%%(.*?)%%EB%%/g, '<strong>$1</strong>');
-        trimmedLine = trimmedLine.replace(/%%T%%(.*?)%%ET%%/g, '<span class="thought">$1</span>');
-        trimmedLine = trimmedLine.replace(/%%I%%(.*?)%%EI%%/g, '<em>$1</em>');
-
-        // 4. 角色對白 (保留「」符號)
-        if (trimmedLine.includes('「')) {
-            trimmedLine = trimmedLine.replace(/「(.*?)」/g, '<span class="dialogue">「$1」</span>');
+        // V3 新解析邏輯：不允許疊加，由大到小匹配並隱藏符號
+        // 1. ***大標題***
+        if (/^\*\*\*(.*?)\*\*\*$/.test(trimmed)) {
+            trimmed = trimmed.replace(/^\*\*\*(.*?)\*\*\*$/, '<div class="md-h1">$1</div>');
+        } 
+        // 2. **小標題**
+        else if (/^\*\*(.*?)\*\*$/.test(trimmed)) {
+            trimmed = trimmed.replace(/^\*\*(.*?)\*\*$/, '<div class="md-h2">$1</div>');
+        } 
+        // 3. *粗體*
+        else if (/\*(.*?)\*/.test(trimmed)) {
+            trimmed = trimmed.replace(/\*(.*?)\*/g, '<span class="md-bold">$1</span>');
         }
+        
+        // 4. //內心獨白// (獨立邏輯，可出現在行中)
+        trimmed = trimmed.replace(/\/\/(.*?)\/\//g, '<span class="md-thought">$1</span>');
+        
+        // 5. /斜體/
+        trimmed = trimmed.replace(/\/(.*?)\//g, '<span class="md-italic">$1</span>');
 
-        htmlOutput += `<p class="line">${trimmedLine}</p>`;
+        // 6. 「角色對白」
+        trimmed = trimmed.replace(/「(.*?)」/g, '<span class="md-dialogue">「$1」</span>');
+
+        htmlOutput += `<p class="line">${trimmed}</p>`;
     });
 
     return htmlOutput;
 }
 
+// --- 5. 側邊進度條邏輯 ---
+function initSideProgress() {
+    const track = document.getElementById('side-progress-track');
+    const thumb = document.getElementById('side-progress-thumb');
+    if (!track || !thumb) return;
 
-// ==========================================
-// 🕹️ UI 互動與沉浸模式 (Interactions)
-// ==========================================
-
-function initReaderInteractions() {
-    // 監聽滾動：隱藏 UI 與 更新進度條
     window.addEventListener('scroll', () => {
-        updateProgressBar();
-        
-        if (isUiVisible) {
-            document.body.classList.add('ui-hidden');
-            const menu = document.getElementById('chapter-menu');
-            if (menu) menu.classList.remove('active'); // 滑動時順便關閉選單
-            isUiVisible = false;
-        }
+        const totalHeight = document.body.scrollHeight - window.innerHeight;
+        const progress = (window.scrollY / totalHeight) * 100;
+        thumb.style.height = `${progress}%`;
     });
 
-    // 監聽點擊：呼出 UI (排除 UI 元件本身)
-    document.addEventListener('click', (e) => {
-        const clickedUI = e.target.closest('.glass-dock') || 
-                          e.target.closest('#book-header') || 
-                          e.target.closest('.chapter-menu') || 
-                          e.target.closest('#reader-nav') ||
-                          e.target.closest('.side-progress-container');
-        
-        if (clickedUI) return; // 點擊 UI 內部不觸發顯示/隱藏切換
-
-        if (!isUiVisible) {
-            document.body.classList.remove('ui-hidden');
-            isUiVisible = true;
-        }
+    track.addEventListener('click', (e) => {
+        const rect = track.getBoundingClientRect();
+        const clickY = e.clientY - rect.top;
+        const percentage = clickY / rect.height;
+        window.scrollTo({
+            top: (document.body.scrollHeight - window.innerHeight) * percentage,
+            behavior: 'smooth'
+        });
     });
 }
 
-// 側邊進度條更新
-function updateProgressBar() {
-    const winScroll = document.body.scrollTop || document.documentElement.scrollTop;
-    const height = document.documentElement.scrollHeight - document.documentElement.clientHeight;
-    const scrolled = height > 0 ? (winScroll / height) * 100 : 0;
-    const bar = document.getElementById('progress-bar-fill');
-    if(bar) bar.style.height = scrolled + "%";
+// --- 6. 字體與收藏控制 ---
+function changeFontSize(delta) {
+    CodexState.fontSize += delta;
+    if (CodexState.fontSize < 12) CodexState.fontSize = 12;
+    if (CodexState.fontSize > 40) CodexState.fontSize = 40;
+    
+    applyFontSize();
+    localStorage.setItem('codex_font_size', CodexState.fontSize);
 }
 
-// --- 字體大小調整 (A+ / A-) ---
-function changeFontSize(step) {
-    let currentFontSize = parseFloat(localStorage.getItem('mimi-font-size')) || 1.1;
-    currentFontSize += step;
-    
-    // 限制字體大小範圍
-    if(currentFontSize < 0.8) currentFontSize = 0.8;
-    if(currentFontSize > 2.5) currentFontSize = 2.5;
-    
-    document.documentElement.style.setProperty('--reader-font-size', currentFontSize + 'rem');
-    localStorage.setItem('mimi-font-size', currentFontSize);
+function applyFontSize() {
+    const content = document.getElementById('script-content');
+    if (content) content.style.fontSize = `${CodexState.fontSize}px`;
 }
 
-function initUserPreferences() {
-    // 字體初始化
-    const savedFontSize = localStorage.getItem('mimi-font-size');
-    if (savedFontSize) {
-        document.documentElement.style.setProperty('--reader-font-size', savedFontSize + 'rem');
-    }
-}
-
-// --- 愛心收藏系統 ---
-function toggleHeart() {
-    let favs = JSON.parse(localStorage.getItem('mimi-favorites') || '[]');
-    const btn = document.getElementById('heart-btn');
-    
-    if (favs.includes(currentBookId)) {
-        favs = favs.filter(id => id !== currentBookId); // 移除收藏
-        if(btn) btn.classList.remove('heart-active');
+function toggleFavorite() {
+    const id = CodexState.currentBook.id;
+    const idx = CodexState.favorites.indexOf(id);
+    if (idx > -1) {
+        CodexState.favorites.splice(idx, 1);
     } else {
-        favs.push(currentBookId); // 加入收藏
-        if(btn) btn.classList.add('heart-active');
+        CodexState.favorites.push(id);
     }
-    localStorage.setItem('mimi-favorites', JSON.stringify(favs));
+    localStorage.setItem('codex_favorites', JSON.stringify(CodexState.favorites));
+    updateFavoriteIcon();
 }
 
-function checkHeartStatus() {
-    let favs = JSON.parse(localStorage.getItem('mimi-favorites') || '[]');
-    const btn = document.getElementById('heart-btn');
-    if (favs.includes(currentBookId) && btn) {
-        btn.classList.add('heart-active');
-    }
+function updateFavoriteIcon() {
+    const favBtn = document.getElementById('fav-btn');
+    if (!favBtn || !CodexState.currentBook) return;
+    const isFav = CodexState.favorites.includes(CodexState.currentBook.id);
+    favBtn.innerHTML = isFav ? '♥ 已收藏' : '♡ 收藏';
+    favBtn.style.color = isFav ? '#ff8a8a' : 'inherit';
 }
 
-// --- 章回選單與閱讀紀錄 ---
-function toggleChapterMenu() {
-    const menu = document.getElementById('chapter-menu');
-    if (!menu) return;
-    
-    menu.classList.toggle('active');
-    if (menu.classList.contains('active')) {
-        renderChapterMenu();
-    }
-}
-
-function renderChapterMenu() {
-    const menu = document.getElementById('chapter-menu');
-    const readList = JSON.parse(localStorage.getItem('mimi-read') || '{}');
-    const bookReadList = readList[currentBookId] || [];
-
-    menu.innerHTML = currentChapters.map((ch, idx) => {
-        const isRead = bookReadList.includes(idx) ? 'read' : '';
-        const currentMark = idx === currentIndex ? '★ ' : ''; // 當前章節標記
-        // 從檔名中提取章節名稱 (簡單處理)，或直接顯示第X章
-        const displayName = ch.file.replace('.txt', ''); 
-        
-        return `<div class="chapter-item ${isRead}" onclick="fetchChapter(${idx}); toggleChapterMenu();">${currentMark}${displayName}</div>`;
-    }).join('');
-}
-
-function markChapterAsRead(index) {
-    let readList = JSON.parse(localStorage.getItem('mimi-read') || '{}');
-    if (!readList[currentBookId]) readList[currentBookId] = [];
-    
-    if (!readList[currentBookId].includes(index)) {
-        readList[currentBookId].push(index);
-        localStorage.setItem('mimi-read', JSON.stringify(readList));
-    }
-}
-
-// ==========================================
-// 導航與主題控制 (Navigation & Theme)
-// ==========================================
-
-function setupNavigation() {
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-
-    if (prevBtn) prevBtn.onclick = () => { if (currentIndex > 0) fetchChapter(currentIndex - 1); };
-    if (nextBtn) nextBtn.onclick = () => { if (currentIndex < currentChapters.length - 1) fetchChapter(currentIndex + 1); };
-}
-
-function updateNavUI() {
-    const prevBtn = document.getElementById('prev-btn');
-    const nextBtn = document.getElementById('next-btn');
-
-    if (prevBtn) {
-        const isFirst = currentIndex === 0;
-        prevBtn.style.opacity = isFirst ? "0.3" : "1";
-        prevBtn.style.pointerEvents = isFirst ? "none" : "auto";
-    }
-    if (nextBtn) {
-        const isLast = currentIndex === currentChapters.length - 1;
-        nextBtn.style.opacity = isLast ? "0.3" : "1";
-        nextBtn.style.pointerEvents = isLast ? "none" : "auto";
-    }
-}
-
+// --- 7. 主題切換 (繼承原本功能並優化) ---
 function setMode(mode) {
     document.body.className = `mode-${mode}`;
-    updateThemeEffects(mode, null); 
+    localStorage.setItem('codex_theme_mode', mode);
 }
 
 function setMood(mood) {
-    const currentClass = Array.from(document.body.classList).find(c => c.startsWith('mode-'));
-    const currentMode = currentClass ? currentClass.replace('mode-', '') : 'beige';
-    updateThemeEffects(currentMode, mood);
-}
-
-function updateThemeEffects(bg, mood) {
-    const isDark = bg === 'black';
-    const accentKey = mood || 'blood'; 
-
-    const rgbMatrix = {
-        light: { blood: '139, 45, 45', curse: '45, 139, 90', ice: '45, 90, 139', undead: '74, 74, 74' },
-        dark: { blood: '255, 138, 138', curse: '138, 255, 193', ice: '138, 212, 255', undead: '209, 209, 209' }
-    };
-
-    const rgbValue = rgbMatrix[isDark ? 'dark' : 'light'][accentKey];
-    document.documentElement.style.setProperty('--accent-rgb', rgbValue);
+    const root = document.querySelector(':root');
+    const isDark = document.body.classList.contains('mode-black');
+    const prefix = isDark ? '--ice-' : '--ink-';
     
-    const colorHex = isDark ? `var(--ice-${accentKey})` : `var(--ink-${accentKey})`;
-    document.documentElement.style.setProperty('--current-accent', colorHex);
+    // 更新 CSS 變數
+    const accentColor = getComputedStyle(document.documentElement).getPropertyValue(`${prefix}${mood}`);
+    const rgbValue = getComputedStyle(document.documentElement).getPropertyValue(`${prefix}rgb-${mood}`);
+    
+    root.style.setProperty('--current-accent', accentColor);
+    root.style.setProperty('--accent-rgb', rgbValue);
 }
-
-// 暴露給 HTML onClick 調用的全域函數
-window.setMode = setMode;
-window.setMood = setMood;
-window.changeFontSize = changeFontSize;
-window.toggleHeart = toggleHeart;
-window.toggleChapterMenu = toggleChapterMenu;
-window.saveUsername = saveUsername;
